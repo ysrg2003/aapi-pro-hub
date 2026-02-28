@@ -12,9 +12,6 @@ on:
         required: true
         type: string
 
-env:
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
 jobs:
   call-chatgpt:
     name: استدعاء ChatGPT API
@@ -27,46 +24,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
-      - name: تثبيت التبعيات
+      - name: تثبيت openai
         run: pip install openai
 
-      - name: استدعاء ChatGPT API
-        id: gpt-call
+      - name: استدعاء ChatGPT
         env:
           PROMPT: ${{ github.event.inputs.prompt }}
           REQUEST_ID: ${{ github.event.inputs.request_id }}
-        run: |
-          python -c "
-import os
-import openai
-import json
-
-openai.api_key = os.getenv('OPENAI_API_KEY')
-
-response = openai.chat.completions.create(
-    model='gpt-4o',
-    messages=[
-        {'role': 'system', 'content': 'أنت مساعد برمجي متخصص.'},
-        {'role': 'user', 'content': '${{ env.PROMPT }}'}
-    ],
-    temperature=0.7,
-    max_tokens=4000
-)
-
-result = {
-    'request_id': '${{ env.REQUEST_ID }}',
-    'response': response.choices[0].message.content,
-    'model': 'gpt-4o',
-    'status': 'success'
-}
-
-with open('gpt_result.json', 'w', encoding='utf-8') as f:
-    json.dump(result, f, ensure_ascii=False, indent=2)
-
-print('Done')
-"
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python scripts/gpt_client.py
 
       - name: ضغط النتيجة
         run: tar -I zstd -cvf gpt_output.tar.zst gpt_result.json

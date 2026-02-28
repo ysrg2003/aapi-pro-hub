@@ -14,14 +14,11 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
-  NODE_VERSION: '20'
 
 jobs:
   analyze:
     name: تحليل الطلب (AI-1)
     runs-on: ubuntu-latest
-    outputs:
-      spec: ${{ steps.analyze.outputs.spec }}
     steps:
       - name: استنساخ المستودع
         uses: actions/checkout@v4
@@ -30,48 +27,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
 
       - name: تحليل الطلب
-        id: analyze
         env:
           PROMPT: ${{ github.event.inputs.prompt }}
           REQUEST_ID: ${{ github.event.inputs.request_id }}
-        run: |
-          python -c "
-import json
-
-prompt = '''$PROMPT'''
-request_id = '''$REQUEST_ID'''
-
-intent = 'create'
-if any(w in prompt.lower() for w in ['عدل', 'تعديل', 'modify', 'update']):
-    intent = 'modify'
-
-language = 'python'
-if any(w in prompt.lower() for w in ['javascript', 'js', 'جافا']):
-    language = 'javascript'
-if any(w in prompt.lower() for w in ['html', 'صفحة']):
-    language = 'html'
-
-spec = {
-    'intent': intent,
-    'language': language,
-    'framework': 'none',
-    'original_prompt': prompt,
-    'files_needed': ['main.py', 'requirements.txt'],
-    'acceptance_criteria': ['الكود يشتغل بدون أخطاء'],
-    'build_commands': ['pip install -r requirements.txt'],
-    'test_commands': ['python -m pytest'],
-    'strict_mode': True,
-    'request_id': request_id
-}
-
-with open('spec.json', 'w', encoding='utf-8') as f:
-    json.dump(spec, f, ensure_ascii=False, indent=2)
-
-print('Spec created')
-"
+        run: python scripts/analyzer.py
 
       - name: رفع SPEC
         uses: actions/upload-artifact@v4
@@ -102,44 +63,10 @@ print('Spec created')
       - name: توليد الكود
         env:
           PROMPT: ${{ github.event.inputs.prompt }}
-        run: |
-          mkdir -p generated_code
-          python -c "
-import json
-
-with open('spec.json', 'r', encoding='utf-8') as f:
-    spec = json.load(f)
-
-lang = spec.get('language', 'python')
-files = spec.get('files_needed', ['main.py'])
-
-for file in files:
-    content = ''
-    if file.endswith('.py'):
-        content = f'''#!/usr/bin/env python3
-\"\"\"
-{spec.get('original_prompt', 'مشروع برمجي')}
-\"\"\"
-
-def main():
-    print(\"Hello from AAPI Pro!\")
-
-if __name__ == \"__main__\":
-    main()
-'''
-    elif file == 'requirements.txt':
-        content = '# متطلبات المشروع\n'
-    else:
-        content = f'# {file}\n'
-    
-    with open(f'generated_code/{file}', 'w', encoding='utf-8') as f:
-        f.write(content)
-    print(f'Created: {file}')
-"
+        run: python scripts/code_generator.py
 
       - name: ضغط الملفات
-        run: |
-          tar -I zstd -cvf code_output.tar.zst generated_code/
+        run: tar -I zstd -cvf code_output.tar.zst generated_code/
 
       - name: رفع الكود
         uses: actions/upload-artifact@v4
@@ -171,20 +98,12 @@ if __name__ == \"__main__\":
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
 
       - name: تشغيل الكود
         run: |
           if [ -f output/generated_code/main.py ]; then
             python output/generated_code/main.py
           fi
-
-      - name: رفع السجلات
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs-${{ github.event.inputs.request_id }}
-          path: logs.txt
-          retention-days: 7
 
   evaluate:
     name: تقييم النتيجة
@@ -201,26 +120,7 @@ if __name__ == \"__main__\":
           path: .
 
       - name: التقييم
-        run: |
-          python -c "
-import json
-
-with open('spec.json', 'r') as f:
-    spec = json.load(f)
-
-result = {
-    'passed': True,
-    'iteration': 1,
-    'failures': [],
-    'recommendations': ['تم بنجاح!'],
-    'should_retry': False
-}
-
-with open('evaluation.json', 'w') as f:
-    json.dump(result, f, ensure_ascii=False, indent=2)
-
-print('Evaluation: PASSED')
-"
+        run: python scripts/evaluator.py
 
       - name: رفع التقييم
         uses: actions/upload-artifact@v4
