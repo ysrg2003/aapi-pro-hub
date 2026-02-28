@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AAPI Pro Hub | الأتمتة البرمجية الذكية</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --text: #1f1f1f;
+            --primary: #1a73e8;
+            --secondary: #f1f3f4;
+            --user-bubble: #e8f0fe;
+            --bot-bubble: #ffffff;
+            --border: #dee2e6;
+            --accent: linear-gradient(135deg, #1a73e8, #701af0);
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --code-header: #2d2d2d;
+            --gpt-theme: #10a37f;
+            --success: #34d399;
+            --warning: #fbbf24;
+            --error: #f87171;
+        }
+
+        [data-theme="dark"] {
+            --bg: #131314;
+            --card: #1e1f20;
+            --text: #e3e3e3;
+            --primary: #8ab4f8;
+            --secondary: #2d2f31;
+            --user-bubble: #004a77;
+            --bot-bubble: #1e1f20;
+            --border: #444746;
+            --shadow: 0 4px 25px rgba(0,0,0,0.3);
+            --code-bg: #000000;
+            --code-text: #e3e3e3;
+            --code-header: #1a1a1a;
+        }
+
+        * { box-sizing: border-box; transition: background 0.25s, color 0.25s; }
+
+        body {
+            font-family: 'IBM Plex Sans Arabic', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+        }
+
+        header {
+            flex-shrink: 0;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            z-index: 1000;
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 600;
+            background: var(--accent);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-text-fill-color: white;
+        }
+
+        .nav-tools { display: flex; gap: 12px; }
+        
+        .tool-btn {
+            background: var(--secondary);
+            border: none;
+            color: var(--text);
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: transform 0.2s;
+        }
+
+        .tool-btn:hover { transform: scale(1.05); }
+
+        #settings-panel {
+            background: var(--card);
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: none;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            flex-shrink: 0;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-field { display: flex; flex-direction: column; gap: 5px; }
+        .input-field label { font-size: 12px; font-weight: bold; opacity: 0.8; }
+        .input-field input {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--secondary);
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-field input:focus { border-color: var(--primary); }
+
+        .settings-hint {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+
+        #chat-viewport {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 10%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .msg-container {
+            display: flex;
+            flex-direction: column;
+            max-width: 100%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .user-align { align-self: flex-start; }
+        .bot-align { align-self: flex-end; width: 100%; align-items: flex-end; }
+
+        .bubble {
+            padding: 16px 22px;
+            border-radius: 20px;
+            font-size: 15.5px;
+            line-height: 1.7;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            max-width: 100%;
+        }
+
+        .bubble table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            background: var(--card);
+            border-radius: 8px;
+            overflow: hidden;
+            display: block;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+        }
+
+        .bubble th {
+            background: var(--primary);
+            color: white !important;
+            padding: 12px;
+            text-align: right;
+        }
+
+        .bubble td {
+            border: 1px solid var(--border);
+            padding: 10px;
+            text-align: right;
+        }
+
+        .user-align .bubble {
+            background: var(--user-bubble);
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot-align .bubble {
+            background: var(--bot-bubble);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+            max-width: 92%;
+        }
+
+        .system-msg {
+            align-self: center;
+            background: var(--secondary);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            opacity: 0.8;
+        }
+
+        .code-wrapper {
+            margin: 15px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--code-bg);
+            direction: ltr;
+            text-align: left;
+        }
+
+        .code-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            background: var(--code-header);
+            color: #00cf7f;
+            font-size: 11px;
+            font-family: monospace;
+        }
+
+        .copy-btn-snippet {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: background 0.2s;
+        }
+
+        .copy-btn-snippet:hover { background: rgba(255,255,255,0.2); }
+
+        .bubble pre {
+            margin: 0 !important;
+            padding: 15px;
+            overflow-x: auto;
+            color: var(--code-text);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            background: transparent !important;
+        }
+
+        .footer-area {
+            flex-shrink: 0;
+            padding: 15px;
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-container {
+            width: 100%;
+            max-width: 850px;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            padding: 4px 16px;
+            gap: 8px;
+        }
+
+        textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            padding: 10px;
+            font-size: 15px;
+            resize: none;
+            outline: none;
+            max-height: 150px;
+            min-height: 24px;
+            font-family: inherit;
+        }
+
+        .engine-select {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .send-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .send-btn:hover { transform: scale(1.05); }
+        .send-btn:disabled { background: #ccc !important; cursor: not-allowed; opacity: 0.6; transform: none; }
+
+        #status-bar {
+            font-size: 12px;
+            margin-bottom: 8px;
+            color: var(--primary);
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .loader {
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--primary);
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            animation: rotation 1s linear infinite;
+        }
+
+        .msg-actions {
+            margin-top: 8px;
+            font-size: 12px;
+            display: flex;
+            gap: 15px;
+            opacity: 0.7;
+        }
+
+        .action-link {
+            cursor: pointer;
+            color: var(--primary);
+            transition: opacity 0.2s;
+        }
+
+        .action-link:hover { opacity: 1; }
+
+        /* Progress indicator */
+        .progress-steps {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            justify-content: center;
+        }
+
+        .step {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: background 0.3s;
+        }
+
+        .step.active { background: var(--primary); }
+        .step.completed { background: var(--success); }
+        .step.error { background: var(--error); }
+
+        /* Status badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 4px 0;
+        }
+
+        .status-badge.analyzing { background: #fef3c7; color: #92400e; }
+        .status-badge.generating { background: #dbeafe; color: #1e40af; }
+        .status-badge.building { background: #e0e7ff; color: #3730a3; }
+        .status-badge.testing { background: #d1fae5; color: #065f46; }
+        .status-badge.success { background: #d1fae5; color: #065f46; }
+        .status-badge.error { background: #fee2e2; color: #991b1b; }
+
+        @keyframes rotation {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            #chat-viewport { padding: 20px 5%; }
+            .engine-select { padding: 6px 8px; font-size: 11px; }
+            .bot-align .bubble { max-width: 95%; }
+            .input-container { padding: 4px 10px; }
+        }
+
+        /* Code highlighting */
+        .code-keyword { color: #569cd6; }
+        .code-string { color: #ce9178; }
+        .code-comment { color: #6a9955; }
+        .code-function { color: #dcdcaa; }
+        .code-number { color: #b5cea8; }
+    </style>
+</head>
+<body data-theme="light">
+
+<header>
+    <div class="logo">
+        <div class="logo-icon">⚡</div>
+        AAPI Pro Hub
+    </div>
+    <div class="nav-tools">
+        <button class="tool-btn" onclick="toggleSettings()" title="الإعدادات">⚙️</button>
+        <button class="tool-btn" id="themeBtn" onclick="toggleTheme()" title="الوضع">🌙</button>
+    </div>
+</header>
+
+<div id="settings-panel">
+    <div class="input-field">
+        <label>GitHub Token</label>
+        <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx">
+        <span class="settings-hint">يحفظ محلياً - غير مرفوع للخادم</span>
+    </div>
+    <div class="input-field">
+        <label>المستودع (Owner/Repo)</label>
+        <input type="text" id="ghRepo" placeholder="username/repository">
+    </div>
+    <div class="input-field">
+        <label>معرف الطلب (Request ID)</label>
+        <input type="text" id="requestId" placeholder="اترك فارغاً للتوليد التلقائي">
+        <span class="settings-hint">معرف فريد لتتبع الطلب</span>
+    </div>
+</div>
+
+<div id="chat-viewport">
+    <div class="msg-container bot-align">
+        <div class="bubble">
+            <strong>مرحباً بك في AAPI Pro Hub! ⚡</strong><br><br>
+            نظام الأتمتة البرمجية الذكي على GitHub Actions<br><br>
+            <div style="opacity: 0.8; font-size: 13px;">
+                📋 <strong>كيف يعمل:</strong><br>
+                1. أرسل طلبك (برومبت)<br>
+                2. AI-1 يحلل ويحدد المطلوب<br>
+                3. AI-2 ينشئ الكود<br>
+                4. GitHub Actions ينفذ ويختبر<br>
+                5. التكرار التلقائي حتى النجاح<br><br>
+                <strong>⚠️ تأكد من:</strong><br>
+                • تفعيل GitHub Actions في المستودع<br>
+                • إنشاء GitHub Token بصلاحيات repo + workflow
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="footer-area">
+    <div id="status-bar">
+        <span class="loader"></span>
+        <span id="status-text">جاري المعالجة...</span>
+        <div class="progress-steps" id="progressSteps">
+            <div class="step" data-step="1"></div>
+            <div class="step" data-step="2"></div>
+            <div class="step" data-step="3"></div>
+            <div class="step" data-step="4"></div>
+            <div class="step" data-step="5"></div>
+        </div>
+    </div>
+    
+    <div class="input-container">
+        <select id="engineSelect" class="engine-select" onchange="updateEngineStatus()">
+            <option value="gemini">🤖 Gemini</option>
+            <option value="chatgpt">💬 ChatGPT</option>
+            <option value="auto">🔄 Auto (محلل + مولد)</option>
+        </select>
+
+        <textarea id="promptInput" rows="1" placeholder="اكتب طلبك هنا... (مثال: أنشئ لي صفحة HTML لمحفظة صور)" oninput="autoResize(this)"></textarea>
+        
+        <button class="send-btn" id="sendBtn" onclick="startProcess()">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<script>
+    // ============ التهيئة الأولية ============
+    window.onload = () => {
+        // استعادة الإعدادات
+        document.getElementById('ghToken').value = localStorage.getItem('cfg_token') || '';
+        document.getElementById('ghRepo').value = localStorage.getItem('cfg_repo') || '';
+        
+        // استعادة السمة
+        const theme = localStorage.getItem('cfg_theme') || 'light';
+        document.body.setAttribute('data-theme', theme);
+        document.getElementById('themeBtn').innerText = theme === 'light' ? '🌙' : '☀️';
+        
+        updateEngineStatus();
+    };
+
+    // ============ التحكم بالسمة ============
+    function toggleTheme() {
+        const next = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        document.body.setAttribute('data-theme', next);
+        localStorage.setItem('cfg_theme', next);
+        document.getElementById('themeBtn').innerText = next === 'light' ? '🌙' : '☀️';
+    }
+
+    // ============ لوحة الإعدادات ============
+    function toggleSettings() {
+        const p = document.getElementById('settings-panel');
+        p.style.display = (window.getComputedStyle(p).display === 'none') ? 'grid' : 'none';
+    }
+
+    // ============ تحديث حالة المحرك ============
+    function updateEngineStatus() {
+        const select = document.getElementById('engineSelect');
+        const name = select.options[select.selectedIndex].text;
+        const btn = document.getElementById('sendBtn');
+        
+        const colors = {
+            'gemini': 'var(--primary)',
+            'chatgpt': 'var(--gpt-theme)',
+            'auto': 'linear-gradient(135deg, #1a73e8, #10a37f)'
+        };
+        
+        btn.style.background = colors[select.value] || colors['gemini'];
+    }
+
+    // ============ تعديل حجم الـ textarea ============
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    }
+
+    // ============ إنشاء رسالة ============
+    function createMessage(text, side, type = 'text') {
+        const viewport = document.getElementById('chat-viewport');
+        const container = document.createElement('div');
+        container.className = `msg-container ${side}-align`;
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        
+        if (side === 'system') {
+            container.className = '';
+            container.style.textAlign = 'center';
+            bubble.innerText = text;
+            bubble.style.background = 'var(--secondary)';
+            bubble.style.fontSize = '13px';
+            bubble.style.opacity = '0.8';
+        } else if (side === 'bot') {
+            bubble.innerHTML = text;
+            renderCodeBlocks(bubble);
+        } else {
+            bubble.innerText = text;
+        }
+        
+        container.appendChild(bubble);
+
+        if(side === 'bot') {
+            const actions = document.createElement('div');
+            actions.className = 'msg-actions';
+            actions.innerHTML = `
+                <span class="action-link" onclick="copyFullResponse(this)">📋 نسخ الرد</span>
+                <span class="action-link" onclick="retryLastPrompt()">🔄 إعادة المحاولة</span>
+            `;
+            container.appendChild(actions);
+        }
+
+        viewport.appendChild(container);
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+        
+        return container;
+    }
+
+    // ============ عرض كود البرمجي ============
+    function renderCodeBlocks(bubble) {
+        const preBlocks = bubble.querySelectorAll('pre');
+        preBlocks.forEach(pre => {
+            if (pre.parentElement.classList.contains('code-wrapper')) return;
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = 'code-wrapper';
+            
+            let langName = 'code';
+            const codeInside = pre.querySelector('code');
+            if(codeInside) {
+                const langClass = Array.from(codeInside.classList).find(c => c.startsWith('language-'));
+                if(langClass) langName = langClass.replace('language-', '');
+            }
+
+            const header = document.createElement('div');
+            header.className = 'code-header-bar';
+            header.innerHTML = `
+                <span>${langName}</span>
+                <button class="copy-btn-snippet" onclick="copySnippet(this)">نسخ</button>
+            `;
+            
+            pre.parentNode.insertBefore(wrapper, pre);
+            wrapper.appendChild(header);
+            wrapper.appendChild(pre);
+        });
+    }
+
+    // ============ نسخ المقتطف ============
+    async function copySnippet(btn) {
+        const code = btn.parentElement.nextElementSibling.innerText;
+        await navigator.clipboard.writeText(code);
+        btn.innerText = "✅";
+        setTimeout(() => btn.innerText = "نسخ", 2000);
+    }
+
+    // ============ نسخ الرد الكامل ============
+    async function copyFullResponse(el) {
+        const text = el.parentElement.previousElementSibling.innerText;
+        await navigator.clipboard.writeText(text);
+        el.innerText = "✅ تم النسخ";
+        setTimeout(() => el.innerText = "📋 نسخ الرد", 2000);
+    }
+
+    // ============ عرض الخطوات ============
+    function updateProgress(step, status) {
+        const steps = document.querySelectorAll('.step');
+        const texts = ['تحليل', 'توليد', 'بناء', 'اختبار', 'تقييم'];
+        
+        steps.forEach((s, i) => {
+            s.classList.remove('active', 'completed', 'error');
+            if (i + 1 < step) s.classList.add('completed');
+            if (i + 1 === step) s.classList.add(status);
+        });
+        
+        if (status === 'completed' || status === 'error') {
+            steps[step-1].classList.remove('active');
+            if (step < 5) steps[step].classList.add('active');
+        }
+        
+        document.getElementById('status-text').innerText = texts[step - 1] || '';
+    }
+
+    // ============ إعادة المحاولة ============
+    let lastPrompt = '';
+    function retryLastPrompt() {
+        if (lastPrompt) {
+            document.getElementById('promptInput').value = lastPrompt;
+            startProcess();
+        }
+    }
+
+    // ============ بدء العملية ============
+    async function startProcess() {
+        const token = document.getElementById('ghToken').value.trim();
+        const repo = document.getElementById('ghRepo').value.trim();
+        const prompt = document.getElementById('promptInput').value.trim();
+        const engine = document.getElementById('engineSelect').value;
+        const requestId = document.getElementById('requestId').value.trim() || generateRequestId();
+
+        if (!token || !repo || !prompt) {
+            alert("⚠️ تأكد من:\n• إدخال GitHub Token\n• إدخال اسم المستودع\n• كتابة الطلب");
+            return;
+        }
+
+        // حفظ الإعدادات
+        localStorage.setItem('cfg_token', token);
+        localStorage.setItem('cfg_repo', repo);
+
+        // حفظ最后一次 طلب
+        lastPrompt = prompt;
+
+        // إنشاء رسالة المستخدم
+        createMessage(prompt, 'user');
+
+        // تعطيل الزر
+        document.getElementById('sendBtn').disabled = true;
+        document.getElementById('status-bar').style.display = 'flex';
+
+        // رسالة نظام
+        createMessage(`<span class="status-badge analyzing">🔄 جاري ${engine === 'auto' ? 'المحلل' : engine}</span> بدء معالجة الطلب...`, 'system');
+
+        updateProgress(1, 'active');
+
+        try {
+            const workflowFile = (engine === 'gemini') ? 'gemini_api.yml' : 
+                               (engine === 'chatgpt') ? 'gpt_api.yml' : 'main.yml';
+
+            // إرسال الطلب
+            const res = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/${workflowFile}/dispatches`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`, 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify({ 
+                    ref: 'main', 
+                    inputs: { 
+                        prompt: prompt,
+                        request_id: requestId,
+                        iteration: '1'
+                    } 
+                })
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || "فشل إرسال الطلب");
+            }
+
+            createMessage(`<span class="status-badge analyzing">✅</span> تم إرسال الطلب بنجاح! جاري المعالجة...`, 'system');
+            
+            // بدء مراقبة الحالة
+            checkStatus(repo, token, engine, workflowFile, requestId);
+            
+        } catch (e) {
+            createMessage(`❌ <strong>خطأ:</strong> ${e.message}`, 'bot');
+            document.getElementById('status-bar').style.display = 'none';
+            document.getElementById('sendBtn').disabled = false;
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active', 'completed'));
+        }
+    }
+
+    // ============ مراقبة حالة التنفيذ ============
+    async function checkStatus(repo, token, engine, workflowFile, requestId) {
+        const startTime = Date.now();
+        const maxTime = 300000; // 5 دقائق
+
+        const interval = setInterval(async () => {
+            try {
+                // فحص أحدث التشغيلات
+                const res = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/${workflowFile}/runs?per_page=10`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await res.json();
+                
+                if (!data.workflow_runs) return;
+
+                for (const run of data.workflow_runs) {
+                    if (run.status === "completed") {
+                        const success = await tryFetchArtifact(repo, run.id, token, engine, requestId);
+                        if (success) {
+                            clearInterval(interval);
+                            resetUI();
+                            return;
+                        }
+                    } else if (run.status === "in_progress") {
+                        // تحديث进度
+                        const conclusion = run.conclusion;
+                        if (conclusion === "failure") {
+                            updateProgress(3, 'error');
+                            createMessage(`<span class="status-badge error">❌</span> فشل البناء`, 'system');
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Status Check Error:", e);
+            }
+
+            // timeout
+            if (Date.now() - startTime > maxTime) {
+                clearInterval(interval);
+                createMessage("⚠️ انتهت المهلة (5 دقائق) - يرجى المحاولة مرة أخرى", 'bot');
+                resetUI();
+            }
+        }, 5000);
+    }
+
+    // ============ جلب النتيجة ============
+    async function tryFetchArtifact(repo, runId, token, engine, requestId) {
+        const targetArtifactName = (engine === 'gemini' ? 'gemini-json-' : 
+                                    engine === 'chatgpt' ? 'gpt-json-' : 'result-') + requestId;
+        const targetFile = (engine === 'gemini') ? "gemini_result.json" : 
+                          (engine === 'chatgpt') ? "gpt_result.json" : "result.json";
+
+        try {
+            const res = await fetch(`https://api.github.com/repos/${repo}/actions/runs/${runId}/artifacts`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            const data = await res.json();
+            
+            // البحث عن artifact بالمعرف الصحيح
+            const art = data.artifacts && data.artifacts.find(a => a.name.includes(requestId));
+            
+            if (art) {
+                // فحص إذا كان مضغوطاً بـ zstd
+                if (art.name.endsWith('.tar.zst') || art.name.includes('tar')) {
+                    // التعامل مع الملف المضغوط
+                }
+                
+                const zipRes = await fetch(art.archive_download_url, { 
+                    headers: { 'Authorization': `Bearer ${token}` } 
+                });
+                
+                try {
+                    const blob = await zipRes.blob();
+                    const zip = await JSZip.loadAsync(blob);
+                    
+                    // البحث عن ملف النتيجة
+                    const resultFile = zip.file(targetFile) || 
+                                      zip.file(Object.keys(zip.files)[0]);
+                    
+                    if (resultFile) {
+                        const jsonStr = await resultFile.async("string");
+                        const resultData = JSON.parse(jsonStr);
+                        
+                        updateProgress(5, 'completed');
+                        createMessage(`<span class="status-badge success">✅</span> تم إنجاز الطلب!`, 'system');
+                        createMessage(resultData.response || resultData.text || JSON.stringify(resultData, null, 2), 'bot');
+                        return true;
+                    }
+                } catch (e) {
+                    // ربما الملف ليس مضغوطاً أو JSON
+                    const text = await zipRes.text();
+                    if (text.includes('response') || text.includes('text')) {
+                        updateProgress(5, 'completed');
+                        createMessage(`<span class="status-badge success">✅</span> تم إنجاز الطلب!`, 'system');
+                        createMessage(text, 'bot');
+                        return true;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Artifact Fetch Error:", e);
+        }
+        
+        return false;
+    }
+
+    // ============ إعادة تعيين UI ============
+    function resetUI() {
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('status-bar').style.display = 'none';
+        document.getElementById('promptInput').value = '';
+        document.getElementById('promptInput').style.height = 'auto';
+    }
+
+    // ============ توليد معرف فريد ============
+    function generateRequestId() {
+        return 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+    }
+
+    // ============ اختصارات لوحة المفاتيح ============
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (!document.getElementById('sendBtn').disabled) {
+                startProcess();
+            }
+        }
+        
+        // Ctrl+Enter لإرسال
+        if (e.key === 'Enter' && e.ctrlKey) {
+            startProcess();
+        }
+    });
+</script>
+
+</body>
+</html>
