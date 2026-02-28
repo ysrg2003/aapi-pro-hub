@@ -1,17 +1,14 @@
-# Gemini API Integration Workflow
-
-```yaml
 name: Gemini API Integration
 
 on:
   workflow_dispatch:
     inputs:
       prompt:
-        description: 'البرومبت المرسل للذكاء الاصطناعي'
+        description: 'برومبت الذكاء الاصطناعي'
         required: true
         type: string
       request_id:
-        description: 'معرف الطلب الفريد'
+        description: 'معرف الطلب'
         required: true
         type: string
 
@@ -33,12 +30,7 @@ jobs:
           cache: 'pip'
 
       - name: تثبيت التبعيات
-        run: |
-          pip install google-generativeai python-dotenv
-
-      - name: إنشاء ملف environment
-        run: |
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+        run: pip install google-generativeai
 
       - name: استدعاء Gemini API
         id: gemini-call
@@ -66,28 +58,15 @@ result = {
 with open('gemini_result.json', 'w', encoding='utf-8') as f:
     json.dump(result, f, ensure_ascii=False, indent=2)
 
-print('✅ تم استلام الرد من Gemini')
-print(f'رد الذكاء الاصطناعي: {response.text[:200]}...')
+print('Done')
 "
 
       - name: ضغط النتيجة
-        run: |
-          tar -I zstd -cvf gemini_output.tar.zst gemini_result.json
+        run: tar -I zstd -cvf gemini_output.tar.zst gemini_result.json
 
-      - name: رفع النتيجة كـ Artifact
+      - name: رفع النتيجة
         uses: actions/upload-artifact@v4
         with:
           name: gemini-json-${{ github.event.inputs.request_id }}
           path: gemini_output.tar.zst
           retention-days: 7
-
-      - name: رفع ملف النتيجة
-        uses: actions/upload-artifact@v4
-        with:
-          name: gemini-result-${{ github.event.inputs.request_id }}
-          path: gemini_result.json
-          retention-days: 7
-
-  #_job_
-```
-

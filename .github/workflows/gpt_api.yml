@@ -1,17 +1,14 @@
-# ChatGPT API Integration Workflow
-
-```yaml
 name: ChatGPT API Integration
 
 on:
   workflow_dispatch:
     inputs:
       prompt:
-        description: 'البرومبت المرسل للذكاء الاصطناعي'
+        description: 'برومبت الذكاء الاصطناعي'
         required: true
         type: string
       request_id:
-        description: 'معرف الطلب الفريد'
+        description: 'معرف الطلب'
         required: true
         type: string
 
@@ -33,8 +30,7 @@ jobs:
           cache: 'pip'
 
       - name: تثبيت التبعيات
-        run: |
-          pip install openai python-dotenv
+        run: pip install openai
 
       - name: استدعاء ChatGPT API
         id: gpt-call
@@ -46,14 +42,13 @@ jobs:
 import os
 import openai
 import json
-import base64
 
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
 response = openai.chat.completions.create(
     model='gpt-4o',
     messages=[
-        {'role': 'system', 'content': 'أنت مساعد برمجي متخصص. أجب على الطلبات بأفضل طريقة ممكنة.'},
+        {'role': 'system', 'content': 'أنت مساعد برمجي متخصص.'},
         {'role': 'user', 'content': '${{ env.PROMPT }}'}
     ],
     temperature=0.7,
@@ -64,37 +59,21 @@ result = {
     'request_id': '${{ env.REQUEST_ID }}',
     'response': response.choices[0].message.content,
     'model': 'gpt-4o',
-    'usage': {
-        'prompt_tokens': response.usage.prompt_tokens,
-        'completion_tokens': response.usage.completion_tokens,
-        'total_tokens': response.usage.total_tokens
-    },
     'status': 'success'
 }
 
 with open('gpt_result.json', 'w', encoding='utf-8') as f:
     json.dump(result, f, ensure_ascii=False, indent=2)
 
-print('✅ تم استلام الرد من ChatGPT')
-print(f'رد الذكاء الاصطناعي: {response.choices[0].message.content[:200]}...')
+print('Done')
 "
 
       - name: ضغط النتيجة
-        run: |
-          tar -I zstd -cvf gpt_output.tar.zst gpt_result.json
+        run: tar -I zstd -cvf gpt_output.tar.zst gpt_result.json
 
-      - name: رفع النتيجة كـ Artifact
+      - name: رفع النتيجة
         uses: actions/upload-artifact@v4
         with:
           name: gpt-json-${{ github.event.inputs.request_id }}
           path: gpt_output.tar.zst
           retention-days: 7
-
-      - name: رفع ملف النتيجة
-        uses: actions/upload-artifact@v4
-        with:
-          name: gpt-result-${{ github.event.inputs.request_id }}
-          path: gpt_result.json
-          retention-days: 7
-```
-
